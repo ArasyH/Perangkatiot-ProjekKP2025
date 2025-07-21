@@ -1,0 +1,18 @@
+# Abaikan file environment
+.env
+Backend/.env
+
+# Abaikan file konfigurasi Arduino
+config.h
+TES-PERANGKAT/tes_semua_no32cam2/config.h
+# Abaikan file dan folder umum Python
+__pycache__/
+Backend/__pycache__/
+*.pyc
+venv/
+Backend/venv/
+Backend/.venv/
+.venv/
+
+# Abaikan file sistem operasi
+.DS_Store

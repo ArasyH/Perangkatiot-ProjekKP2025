@@ -1,0 +1,21 @@
+# docker-compose.yml
+services:
+  db:
+    # Menggunakan image resmi MariaDB
+    image: mariadb:10.4.32
+    container_name: kerja_praktek_db
+    restart: unless-stopped
+    environment:
+      # WAJIB: Atur password untuk user 'root'.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # Opsional: Membuat database awal secara otomatis
+      MYSQL_DATABASE: db_kerja_praktek
+    ports:
+      # "Jembatan" port dari Mac Anda ke dalam container
+      - "3306:3306"
+    volumes:
+      # Menyimpan data database secara permanen agar tidak hilang
+      - db-data:/var/lib/mysql
+
+volumes:
+  db-data:

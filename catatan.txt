@@ -1,0 +1,4 @@
+brew services start php@8.2
+brew services start mariadb@11.
+brew services start httpd@2.4
+
