@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       # WAJIB: Atur password untuk user 'root'.
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: arasy@ci
       # Opsional: Membuat database awal secara otomatis
       MYSQL_DATABASE: db_kerja_praktek
     ports:
