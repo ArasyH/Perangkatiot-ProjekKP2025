@@ -14,5 +14,11 @@ Backend/venv/
 Backend/.venv/
 .venv/
 
+# Abaikan file Database 
+db_kerja_praktek_2025-07-28.sql
+
 # Abaikan file sistem operasi
 .DS_Store
+
+# Abaikan file copas
+copas.py

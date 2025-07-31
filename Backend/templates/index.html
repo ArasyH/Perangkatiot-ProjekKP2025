@@ -4,17 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin Presensi</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; }
         .uid-terdaftar { color: #198754; font-weight: bold; }
         .uid-kosong { color: #dc3545; font-style: italic; }
+        .btn-group-sm > .btn { padding: .25rem .5rem; font-size: .875rem; }
     </style>
 </head>
 <body>
     <div class="container mt-4">
         <h1 class="mb-4 text-center">Dashboard Admin Presensi</h1>
+
+        <!-- Area Notifikasi -->
         <div id="status-message" class="alert d-none" role="alert"></div>
+
+        <!-- Form Tambah Karyawan -->
+        <div class="card mb-4">
+            <div class="card-header">Tambah Karyawan Baru</div>
+            <div class="card-body">
+                <form id="form-tambah-karyawan">
+                    <div class="input-group">
+                        <input type="text" id="nama-karyawan-baru" class="form-control" placeholder="Masukkan Nama Karyawan" required>
+                        <button class="btn btn-success" type="submit">Tambah</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabel Karyawan -->
         <div class="card">
             <div class="card-header">Daftar Karyawan</div>
             <div class="card-body">
@@ -24,31 +43,104 @@
                             <th>ID</th>
                             <th>Nama</th>
                             <th>UID Kartu</th>
-                            <th>Aksi</th>
+                            <th>Status</th>
+                            <th class="text-end">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="tabel-karyawan-body">
-                        <tr><td colspan="4" class="text-center">Memuat data...</td></tr>
+                        <!-- Data diisi oleh JavaScript -->
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- Modal untuk Edit Karyawan -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Karyawan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-edit-karyawan">
+                        <input type="hidden" id="edit-karyawan-id">
+                        <div class="mb-3">
+                            <label for="edit-nama" class="form-label">Nama</label>
+                            <input type="text" class="form-control" id="edit-nama" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-status" class="form-label">Status Aktif</label>
+                            <select class="form-select" id="edit-status">
+                                <option value="TRUE">Aktif</option>
+                                <option value="FALSE">Tidak Aktif</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" id="btn-simpan-edit">Simpan Perubahan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        const API_URL = '/api/karyawan';
+
+        // Fungsi untuk menampilkan pesan
+        function tampilkanPesan(pesan, tipe) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = `alert alert-${tipe}`;
+            statusDiv.innerText = pesan;
+            statusDiv.classList.remove('d-none');
+            setTimeout(() => statusDiv.classList.add('d-none'), 5000);
+        }
+
+        // READ: Mengambil dan menampilkan data karyawan
         async function fetchKaryawan() {
             try {
-                const response = await fetch('/api/karyawan');
+                const response = await fetch(API_URL);
                 if (!response.ok) throw new Error('Gagal mengambil data');
                 const karyawanList = await response.json();
+                
                 const tbody = document.getElementById('tabel-karyawan-body');
                 tbody.innerHTML = '';
 
-                karyawanList.forEach(karyawan => {
+                if (karyawanList.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada data karyawan.</td></tr>';
+                    return;
+                }
+
+                karyawanList.forEach(k => {
                     const tr = document.createElement('tr');
-                    let uidCell = karyawan.uid ? `<td class="uid-terdaftar">${karyawan.uid}</td>` : `<td class="uid-kosong">Belum Terdaftar</td>`;
-                    let aksiCell = karyawan.uid ? `<td><span class="badge bg-success">Terdaftar</span></td>` : `<td><button class="btn btn-primary btn-sm btn-register" data-id="${karyawan.id}">Daftarkan Kartu</button></td>`;
-                    tr.innerHTML = `<td>${karyawan.id}</td><td>${karyawan.nama}</td>${uidCell}${aksiCell}`;
+                    const uidCell = k.uid ? `<td class="uid-terdaftar">${k.uid}</td>` : `<td class="uid-kosong">Belum Terdaftar</td>`;
+                    const statusCell = k.status_aktif === 'TRUE' ? `<span class="badge bg-success">Aktif</span>` : `<span class="badge bg-secondary">Tidak Aktif</span>`;
+                    
+                    let aksiBtn;
+                    if (!k.uid) {
+                        aksiBtn = `<button class="btn btn-sm btn-info btn-register" data-id="${k.id}">Daftarkan Kartu</button>`;
+                    } else {
+                        aksiBtn = `<span class="badge bg-light text-dark">Kartu Terdaftar</span>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td>${k.id}</td>
+                        <td>${k.nama}</td>
+                        ${uidCell}
+                        <td>${statusCell}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                ${aksiBtn}
+                                <button class="btn btn-warning btn-edit" data-id="${k.id}" data-nama="${k.nama}" data-status="${k.status_aktif}">Edit</button>
+                                <button class="btn btn-danger btn-delete" data-id="${k.id}">Hapus</button>
+                            </div>
+                        </td>
+                    `;
                     tbody.appendChild(tr);
                 });
             } catch (error) {
@@ -56,46 +148,101 @@
             }
         }
 
-        async function startRegistration(userId, buttonElement) {
-            buttonElement.disabled = true;
-            buttonElement.innerText = 'Menunggu...';
-            try {
-                const response = await fetch('/api/register/start', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    tampilkanPesan(result.message, 'info');
-                } else {
-                    tampilkanPesan(result.message || 'Gagal memulai registrasi.', 'danger');
-                    buttonElement.disabled = false;
-                    buttonElement.innerText = 'Daftarkan Kartu';
-                }
-            } catch (error) {
-                tampilkanPesan('Terjadi kesalahan jaringan.', 'danger');
-                buttonElement.disabled = false;
-                buttonElement.innerText = 'Daftarkan Kartu';
-            }
-        }
-        
-        function tampilkanPesan(pesan, tipe) {
-            const statusDiv = document.getElementById('status-message');
-            statusDiv.className = `alert alert-${tipe}`;
-            statusDiv.innerText = pesan;
-            statusDiv.classList.remove('d-none');
-        }
-
-        document.getElementById('tabel-karyawan-body').addEventListener('click', e => {
-            if (e.target && e.target.classList.contains('btn-register')) {
-                startRegistration(e.target.dataset.id, e.target);
-            }
-        });
-
+        // Event Listener untuk semua aksi (Create, Update, Delete, Register)
         document.addEventListener('DOMContentLoaded', () => {
+            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+
+            // CREATE
+            document.getElementById('form-tambah-karyawan').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const nama = document.getElementById('nama-karyawan-baru').value;
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nama })
+                    });
+                    const result = await response.json();
+                    tampilkanPesan(result.message, response.ok ? 'success' : 'danger');
+                    if (response.ok) {
+                        document.getElementById('form-tambah-karyawan').reset();
+                        fetchKaryawan();
+                    }
+                } catch (error) {
+                    tampilkanPesan('Gagal terhubung ke server.', 'danger');
+                }
+            });
+
+            // Event listener untuk tombol di tabel (Update, Delete, Register)
+            document.getElementById('tabel-karyawan-body').addEventListener('click', async (e) => {
+                const target = e.target;
+                const id = target.dataset.id;
+
+                // UPDATE (tombol Edit ditekan)
+                if (target.classList.contains('btn-edit')) {
+                    document.getElementById('edit-karyawan-id').value = id;
+                    document.getElementById('edit-nama').value = target.dataset.nama;
+                    document.getElementById('edit-status').value = target.dataset.status;
+                    editModal.show();
+                }
+
+                // DELETE
+                if (target.classList.contains('btn-delete')) {
+                    if (confirm('Apakah Anda yakin ingin menghapus karyawan ini?')) {
+                        try {
+                            const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                            const result = await response.json();
+                            tampilkanPesan(result.message, response.ok ? 'success' : 'danger');
+                            fetchKaryawan();
+                        } catch (error) {
+                            tampilkanPesan('Gagal terhubung ke server.', 'danger');
+                        }
+                    }
+                }
+                
+                // REGISTER CARD
+                if (target.classList.contains('btn-register')) {
+                    target.disabled = true;
+                    target.innerText = 'Menunggu...';
+                    try {
+                        const response = await fetch('/api/register/start', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_id: id })
+                        });
+                        const result = await response.json();
+                        tampilkanPesan(result.message, response.ok ? 'info' : 'danger');
+                    } catch (error) {
+                        tampilkanPesan('Gagal memulai registrasi.', 'danger');
+                    }
+                }
+            });
+
+            // UPDATE (tombol Simpan di modal ditekan)
+            document.getElementById('btn-simpan-edit').addEventListener('click', async () => {
+                const id = document.getElementById('edit-karyawan-id').value;
+                const nama = document.getElementById('edit-nama').value;
+                const status_aktif = document.getElementById('edit-status').value;
+                try {
+                    const response = await fetch(`${API_URL}/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nama, status_aktif })
+                    });
+                    const result = await response.json();
+                    tampilkanPesan(result.message, response.ok ? 'success' : 'danger');
+                    if (response.ok) {
+                        editModal.hide();
+                        fetchKaryawan();
+                    }
+                } catch (error) {
+                    tampilkanPesan('Gagal terhubung ke server.', 'danger');
+                }
+            });
+
+            // Muat data awal dan refresh secara berkala
             fetchKaryawan();
-            setInterval(fetchKaryawan, 5000); 
+            setInterval(fetchKaryawan, 5000);
         });
     </script>
 </body>
